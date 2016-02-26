@@ -38,8 +38,7 @@ cpu_info <- read.xlsx("/Users/mrotkevich/Desktop/DATA/cpu-stats.xls", header = T
 cpu_num <- c()
 cpu_info1<-na.omit(cpu_info[cpu_info$CPU != 'Min:' &cpu_info$Step != 'Total:' ,])
 cpu_info1<-cpu_info1[c("CPU","Step","Avg")]
-cpu_info1$CPU<-factor( as.numeric(as.character(cpu_info1$CPU)),labels=cpu_num)
-cpu_info1$Step<-factor( as.numeric(as.character(cpu_info1$Step)),labels = c(50,100,150,200,250,300,350,400,450,500))
+
 #plot(cpu_info1$Step,cpu_info1$Avg,"l",col='black',xlab = 'Step', ylab = 'Seconds',xlim=c(0, 550), ylim=c(0, 100))
 mtcars$gear <- factor(mtcars$gear,levels=c(3,4,5),
                       labels=c("3gears","4gears","5gears")) 
@@ -48,7 +47,25 @@ mtcars$am <- factor(mtcars$am,levels=c(0,1),
 mtcars$cyl <- factor(mtcars$cyl,levels=c(4,6,8),
                      labels=c("4cyl","6cyl","8cyl")) 
 
-ggplot(cpu_info1,aes(x = Step,y = Avg, group = factor(cpu_info1$CPU), colour = factor(cpu_info1$CPU))) + layer(geom="line")
+
+
+
+long_cpu<-cpu_info1 %>% gather(Observation, Time, -CPU,-Step)
+long_cpu<-long_cpu[long_cpu$Observation != 'Avg',]
+long_cpu$CPU<-factor( as.numeric(as.character(long_cpu$CPU)),labels=cpu_num)
+long_cpu$Step<-factor( as.numeric(as.character(long_cpu$Step)),labels = c(50,100,150,200,250,300,350,400,450,500))
+
+cpus <- summarySE(long_cpu,
+                   measurevar="Time",
+                   groupvars=c("CPU","Step"))
+qplot(Step, Time, data=long_cpu, geom=c("point", "smooth"), method="lm")
+
+cpu_plot <- ggplot(cpus, aes(x=Step, y=Time, colour=CPU)) +
+  geom_errorbar(aes(ymin=Time-se, ymax=Time+se, group=CPU),
+                width=.1) +
+  geom_line(aes(group=CPU)) +
+  geom_point() + ggtitle("Time execution of a script depending on CPU and quantity of rows")
+cpu_plot
 
 
 for (j in 1:9) {
